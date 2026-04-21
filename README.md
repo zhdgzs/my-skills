@@ -12,7 +12,7 @@
 仓库内还提供了一个 bootstrap 脚本，用于：
 
 - 将本仓库的 skills 安装到目标 agent 的 skills 目录
-- 从 GitHub 安装 `ui-ux-pro-max`
+- 缺少 `ui-ux-pro-max` 时自动下载并安装
 
 ## 目录结构
 
@@ -21,7 +21,7 @@ my-skills/
 ├── feishu-form-bridge/
 ├── nginx-site-manager/
 ├── scripts/
-│   └── bootstrap_skills.py
+│   └── bootstrap_skills.sh
 ├── site-deployer/
 ├── site-generator/
 └── README.md
@@ -50,65 +50,52 @@ git clone <your-repo-url> /opt/my-skills
 cd /opt/my-skills
 ```
 
-### 2. 安装到 Codex
+### 2. 运行安装脚本
 
 ```bash
-python3 scripts/bootstrap_skills.py --agent codex
+sh scripts/bootstrap_skills.sh
 ```
 
-默认安装目录：
+脚本启动后会先检查仓库中的 `skills/ui-ux-pro-max/`：
 
-```text
-~/.codex/skills
-```
+- 如果已经存在，直接复用
+- 如果不存在，自动从 GitHub 下载并缓存
 
-### 3. 安装到 Claude Code
+然后脚本会交互式询问：
 
-```bash
-python3 scripts/bootstrap_skills.py --agent claude
-```
+- 目标 agent：`codex`、`claude`、`claude-code`、`custom`
+- 目标 skills 目录
+- 安装模式：`symlink` 或 `copy`
+- `agent` 和安装模式都支持数字快捷输入
 
-默认安装目录：
+安装时会始终执行以下操作：
 
-```text
-~/.claude/skills
-```
-
-### 4. 安装到其他 agent
-
-如果目标 agent 支持 skills 目录，但路径不是默认值，可以显式指定：
-
-```bash
-python3 scripts/bootstrap_skills.py --agent custom --dest /path/to/agent/skills
-```
+- 安装本仓库里的本地 skills
+- 一并安装 `ui-ux-pro-max`
+- 如果目标位置已有同名目录，直接覆盖
 
 ## Bootstrap 脚本
 
 脚本文件：
 
-- [scripts/bootstrap_skills.py](/root/my-skills/scripts/bootstrap_skills.py)
+- [scripts/bootstrap_skills.sh](/root/my-skills/scripts/bootstrap_skills.sh)
 
 这个脚本会：
 
+- 启动时先检查 `skills/ui-ux-pro-max/`
+- 本地没有缓存时自动下载 `ui-ux-pro-max`
 - 自动发现本仓库下的本地 skill 目录
 - 安装到指定的 skills 目标目录
-- 从 `nextlevelbuilder/ui-ux-pro-max-skill` 安装 `ui-ux-pro-max`
-
-常用参数示例：
-
-```bash
-python3 scripts/bootstrap_skills.py --agent codex --mode symlink
-python3 scripts/bootstrap_skills.py --agent codex --mode copy
-python3 scripts/bootstrap_skills.py --agent codex --skip-ui
-python3 scripts/bootstrap_skills.py --agent custom --dest /path/to/skills --ui-path <repo-path>
-python3 scripts/bootstrap_skills.py --agent codex --force
-```
+- 自动探测上游仓库里 `ui-ux-pro-max` 的实际 skill 路径
+- 将下载结果缓存到 `skills/ui-ux-pro-max/`
+- 交互式询问安装目标和安装模式
+- 覆盖目标目录中已存在的同名 skill
 
 说明：
 
 - `symlink` 适合开发环境和基于 git 的持续更新
 - `copy` 更适合不支持软链接的 agent 或环境
-- `--force` 会覆盖已存在的安装目录
+- 下载得到的 `skills/ui-ux-pro-max/` 已加入 Git 忽略，不需要提交
 
 ## Git 分发方式
 
@@ -124,10 +111,10 @@ python3 scripts/bootstrap_skills.py --agent codex --force
 ```bash
 cd /opt/my-skills
 git pull
-python3 scripts/bootstrap_skills.py --agent codex --force
+sh scripts/bootstrap_skills.sh
 ```
 
-如果你使用的是 `--mode symlink`，那么仓库内容更新后通常会立即生效，不需要重新复制。
+如果你在交互中选择的是 `symlink`，那么仓库内容更新后通常会立即生效，不需要重新复制。
 
 ## 推荐的远端初始化流程
 
@@ -146,7 +133,7 @@ git push -u origin main
 
 - `ui-ux-pro-max`
 
-本仓库不会直接 vendor 该 skill，而是通过 bootstrap 脚本从以下仓库单独安装：
+本仓库不会直接 vendor 该 skill，而是通过 bootstrap 脚本本地下载、缓存并安装：
 
 - <https://github.com/nextlevelbuilder/ui-ux-pro-max-skill>
 
@@ -161,4 +148,4 @@ git push -u origin main
 
 - skill 内容仓库始终保持一份
 - 不为不同 agent 复制多套 skill
-- 差异仅通过安装脚本参数处理
+- 差异通过安装脚本里的交互选择处理
