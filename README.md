@@ -18,12 +18,14 @@
 
 ```text
 my-skills/
-├── feishu-form-bridge/
-├── nginx-site-manager/
 ├── scripts/
 │   └── bootstrap_skills.sh
-├── site-deployer/
-├── site-generator/
+├── skills/
+│   ├── feishu-form-bridge/
+│   ├── nginx-site-manager/
+│   ├── site-deployer/
+│   ├── site-generator/
+│   └── ui-ux-pro-max/
 └── README.md
 ```
 
@@ -70,8 +72,7 @@ sh scripts/bootstrap_skills.sh
 
 安装时会始终执行以下操作：
 
-- 安装本仓库里的本地 skills
-- 一并安装 `ui-ux-pro-max`
+- 安装 `skills/` 目录下的全部 skills
 - 如果目标位置已有同名目录，直接覆盖
 
 ## Bootstrap 脚本
@@ -84,7 +85,7 @@ sh scripts/bootstrap_skills.sh
 
 - 启动时先检查 `skills/ui-ux-pro-max/`
 - 本地没有缓存时自动下载 `ui-ux-pro-max`
-- 自动发现本仓库下的本地 skill 目录
+- 自动发现 `skills/` 目录下的 skill 目录
 - 安装到指定的 skills 目标目录
 - 自动探测上游仓库里 `ui-ux-pro-max` 的实际 skill 路径
 - 将下载结果缓存到 `skills/ui-ux-pro-max/`

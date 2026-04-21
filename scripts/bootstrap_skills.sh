@@ -196,11 +196,13 @@ confirm_install() {
 
 discover_local_skills() {
   repo_root=$1
-  for entry in "$repo_root"/*; do
+  skills_root=$repo_root/skills
+  [ -d "$skills_root" ] || return 0
+  for entry in "$skills_root"/*; do
     [ -d "$entry" ] || continue
     name=$(basename -- "$entry")
     case "$name" in
-      .*|scripts|skills)
+      .*)
         continue
         ;;
     esac
@@ -336,6 +338,7 @@ download_ui_cache "$cache_root" "$UI_REPO" "$UI_REF" "$UI_PATH" "$UI_NAME" 0
 
 printf '\nInstallation setup\n'
 printf 'Repo root: %s\n' "$REPO_ROOT"
+printf 'Skills root: %s\n' "$REPO_ROOT/skills"
 AGENT=$(prompt_agent)
 DEST=$(prompt_dest "$AGENT")
 MODE=$(prompt_mode)
@@ -347,7 +350,7 @@ printf '\nSummary\n'
 printf 'Target agent: %s\n' "$AGENT"
 printf 'Target skills dir: %s\n' "$DEST"
 printf 'Install mode: %s\n' "$MODE"
-printf 'ui-ux-pro-max cache: %s\n' "$cache_root/$UI_NAME"
+printf 'Repo skills source: %s\n' "$REPO_ROOT/skills"
 printf 'Overwrite existing target entries: yes\n'
 confirm_install
 
@@ -360,6 +363,4 @@ while IFS= read -r skill_dir; do
 done <<EOF
 $(discover_local_skills "$REPO_ROOT")
 EOF
-[ "$local_found" = "1" ] || die "No local skills found under $REPO_ROOT"
-
-install_skill "$cache_root/$UI_NAME" "$DEST" "$UI_NAME" "$MODE" "$FORCE"
+[ "$local_found" = "1" ] || die "No skills found under $REPO_ROOT/skills"
