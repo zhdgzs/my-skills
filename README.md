@@ -1,13 +1,14 @@
 # my-skills
 
-这是一个面向网站交付流程的可移植 skills 仓库。
+这是一个以网站交付流程为主、同时包含通用辅助 workflow skill 的可移植 skills 仓库。
 
-当前仓库包含：
+当前仓库包含以下已提交 skills：
 
 - `site-deployer`：总入口 skill，用于端到端网站交付
 - `site-generator`：静态网站生成
 - `nginx-site-manager`：Nginx 站点配置管理
 - `feishu-form-bridge`：表单后端，将提交数据写入飞书
+- `grill-me`：围绕计划或设计做持续追问，帮助把分支决策逐步收敛到共享理解
 
 仓库内还提供了一个 bootstrap 脚本，用于：
 
@@ -22,19 +23,25 @@ my-skills/
 │   └── bootstrap_skills.sh
 ├── skills/
 │   ├── feishu-form-bridge/
+│   ├── grill-me/
 │   ├── nginx-site-manager/
 │   ├── site-deployer/
-│   ├── site-generator/
-│   └── ui-ux-pro-max/
+│   └── site-generator/
 └── README.md
 ```
+
+说明：
+
+- `ui-ux-pro-max` 是 `site-generator` 依赖的外部 skill
+- 它不会直接提交进本仓库，而是在 bootstrap 时按需下载并缓存到 `skills/ui-ux-pro-max/`
 
 ## 设计思路
 
 本仓库采用“扁平 skill + 总入口编排”的方式，而不是把所有能力塞进一个大 skill：
 
 - `site-deployer` 负责根据用户意图做流程路由
-- 其他 skill 保持小而清晰，便于复用
+- 网站交付相关 skill 保持小而清晰，便于复用
+- `grill-me` 作为独立辅助 skill，负责在方案和设计阶段做高强度追问，不混入部署编排
 - 每个 skill 既可以被总入口调用，也可以单独安装、单独触发
 
 这样做的好处是：
@@ -42,6 +49,7 @@ my-skills/
 - 编排逻辑和实现细节分离
 - 更容易维护和扩展
 - 更适合在不同 agent 之间复用
+- 通用辅助 skill 可以与垂直领域 skill 共存，而不破坏主流程边界
 
 ## 安装方式
 
@@ -72,14 +80,14 @@ sh scripts/bootstrap_skills.sh
 
 安装时会始终执行以下操作：
 
-- 安装 `skills/` 目录下的全部 skills
+- 安装 `skills/` 目录下的全部已提交 skills，包括 `grill-me`
 - 如果目标位置已有同名目录，直接覆盖
 
 ## Bootstrap 脚本
 
 脚本文件：
 
-- [scripts/bootstrap_skills.sh](/root/my-skills/scripts/bootstrap_skills.sh)
+- [scripts/bootstrap_skills.sh](scripts/bootstrap_skills.sh)
 
 这个脚本会：
 
