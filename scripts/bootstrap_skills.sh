@@ -8,12 +8,12 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DEFAULT_REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 
 die() {
-  printf 'error: %s\n' "$*" >&2
+  printf '错误：%s\n' "$*" >&2
   exit 1
 }
 
 require_cmd() {
-  command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
+  command -v "$1" >/dev/null 2>&1 || die "未找到必需命令：$1"
 }
 
 abspath() {
@@ -93,7 +93,7 @@ prompt_value() {
       printf '%s: ' "$prompt" >&2
     fi
 
-    IFS= read -r reply || die "Input aborted."
+    IFS= read -r reply || die "输入已中断。"
 
     if [ -n "$reply" ]; then
       printf '%s\n' "$reply"
@@ -109,7 +109,7 @@ prompt_value() {
 
 prompt_agent() {
   while :; do
-    value=$(prompt_value "Target agent [1 codex, 2 claude, 3 claude-code, 4 custom]" "1")
+    value=$(prompt_value "目标智能体 [1 codex, 2 claude, 3 claude-code, 4 自定义]" "1")
     case "$value" in
       1)
         printf 'codex\n'
@@ -127,12 +127,16 @@ prompt_agent() {
         printf 'custom\n'
         return 0
         ;;
+      自定义)
+        printf 'custom\n'
+        return 0
+        ;;
       codex|claude|claude-code|custom)
         printf '%s\n' "$value"
         return 0
         ;;
       *)
-        printf 'Please enter 1-4 or codex, claude, claude-code, custom.\n' >&2
+        printf '请输入 1-4，或输入 codex、claude、claude-code、custom。\n' >&2
         ;;
     esac
   done
@@ -140,7 +144,7 @@ prompt_agent() {
 
 prompt_mode() {
   while :; do
-    value=$(prompt_value "Install mode [1 symlink, 2 copy]" "1")
+    value=$(prompt_value "安装模式 [1 符号链接, 2 复制]" "1")
     case "$value" in
       1)
         printf 'symlink\n'
@@ -150,15 +154,81 @@ prompt_mode() {
         printf 'copy\n'
         return 0
         ;;
+      符号链接)
+        printf 'symlink\n'
+        return 0
+        ;;
+      复制)
+        printf 'copy\n'
+        return 0
+        ;;
       symlink|copy)
         printf '%s\n' "$value"
         return 0
         ;;
       *)
-        printf 'Please enter 1-2 or symlink, copy.\n' >&2
+        printf '请输入 1-2，或输入 symlink、copy。\n' >&2
         ;;
     esac
   done
+}
+
+prompt_overwrite() {
+  while :; do
+    value=$(prompt_value "已有目标条目 [1 覆盖, 2 跳过]" "1")
+    case "$value" in
+      1|覆盖|overwrite)
+        printf '1\n'
+        return 0
+        ;;
+      2|跳过|skip)
+        printf '0\n'
+        return 0
+        ;;
+      *)
+        printf '请输入 1-2，或输入 覆盖、跳过、overwrite、skip。\n' >&2
+        ;;
+    esac
+  done
+}
+
+display_agent() {
+  case "$1" in
+    custom)
+      printf '自定义\n'
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
+display_mode() {
+  case "$1" in
+    symlink)
+      printf '符号链接\n'
+      ;;
+    copy)
+      printf '复制\n'
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
+display_overwrite() {
+  case "$1" in
+    1)
+      printf '覆盖\n'
+      ;;
+    0)
+      printf '跳过\n'
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
 }
 
 prompt_dest() {
@@ -169,7 +239,7 @@ prompt_dest() {
   fi
 
   while :; do
-    value=$(prompt_value "Target skills directory" "$default_value")
+    value=$(prompt_value "目标技能目录" "$default_value")
     [ -n "$value" ] || continue
     printf '%s\n' "$(expand_path "$value")"
     return 0
@@ -178,17 +248,17 @@ prompt_dest() {
 
 confirm_install() {
   while :; do
-    value=$(prompt_value "Proceed with installation? (y/n)" "y")
+    value=$(prompt_value "继续安装？(y/n)" "y")
     case "$value" in
-      y|Y|yes|YES|Yes)
+      y|Y|yes|YES|Yes|是|确认|继续)
         return 0
         ;;
-      n|N|no|NO|No)
-        printf 'Installation cancelled.\n'
+      n|N|no|NO|No|否|取消)
+        printf '已取消安装。\n'
         exit 0
         ;;
       *)
-        printf 'Please enter y or n.\n' >&2
+        printf '请输入 y 或 n。\n' >&2
         ;;
     esac
   done
@@ -211,14 +281,30 @@ discover_local_skills() {
   done
 }
 
+target_exists() {
+  [ -e "$1" ] || [ -L "$1" ]
+}
+
 ensure_empty_target() {
   target=$1
   force=$2
-  if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+  if ! target_exists "$target"; then
     return 0
   fi
-  [ "$force" = "1" ] || die "Destination already exists: $target"
+  [ "$force" = "1" ] || die "目标已存在：$target"
   rm -rf -- "$target"
+}
+
+ensure_safe_target() {
+  src_abs=$1
+  target=$2
+  target_abs=$(abspath "$target")
+
+  case "$target_abs" in
+    "$src_abs"|"$src_abs"/*)
+      die "安装目标不能是源技能目录本身或其子目录：$target_abs"
+      ;;
+  esac
 }
 
 install_skill() {
@@ -232,23 +318,29 @@ install_skill() {
 
   if [ "$mode" = "symlink" ]; then
     if [ -L "$target" ] && [ "$(readlink -- "$target")" = "$src_abs" ]; then
-      printf 'local  %-22s already linked\n' "$skill_name"
+      printf '本地  %-22s 已链接\n' "$skill_name"
       return 0
     fi
+    if [ "$force" != "1" ] && target_exists "$target"; then
+      printf '本地  %-22s 已存在，已跳过\n' "$skill_name"
+      return 0
+    fi
+    ensure_safe_target "$src_abs" "$target"
     ensure_empty_target "$target" "$force"
     ln -s -- "$src_abs" "$target"
-    printf 'local  %-22s linked\n' "$skill_name"
+    printf '本地  %-22s 已创建链接\n' "$skill_name"
     return 0
   fi
 
-  if [ -d "$target" ] && [ -f "$target/SKILL.md" ] && [ "$force" != "1" ]; then
-    printf 'local  %-22s already present\n' "$skill_name"
+  if [ "$force" != "1" ] && target_exists "$target"; then
+    printf '本地  %-22s 已存在，已跳过\n' "$skill_name"
     return 0
   fi
 
+  ensure_safe_target "$src_abs" "$target"
   ensure_empty_target "$target" "$force"
   cp -a -- "$src" "$target"
-  printf 'local  %-22s copied\n' "$skill_name"
+  printf '本地  %-22s 已复制\n' "$skill_name"
 }
 
 download_ui_cache() {
@@ -261,7 +353,7 @@ download_ui_cache() {
   cache_dir=$cache_root/$skill_name
 
   if [ -d "$cache_dir" ] && [ -f "$cache_dir/SKILL.md" ] && [ "$force" != "1" ]; then
-    printf 'cache  %-22s already present\n' "$skill_name"
+    printf '缓存  %-22s 已存在\n' "$skill_name"
     return 0
   fi
 
@@ -271,7 +363,7 @@ download_ui_cache() {
       name=${repo#*/}
       ;;
     *)
-      die "Invalid --ui-repo, expected owner/repo: $repo"
+      die "--ui-repo 无效，期望格式为 owner/repo：$repo"
       ;;
   esac
 
@@ -290,8 +382,8 @@ download_ui_cache() {
   archive=$tmpdir/repo.zip
   url=https://codeload.github.com/$owner/$name/zip/$ref
 
-  curl -fsSL "$url" -o "$archive" || die "Failed to download $repo@$ref"
-  unzip -q "$archive" -d "$tmpdir" || die "Failed to extract $repo@$ref"
+  curl -fsSL "$url" -o "$archive" || die "下载失败：$repo@$ref"
+  unzip -q "$archive" -d "$tmpdir" || die "解压失败：$repo@$ref"
 
   extracted_root=
   extracted_count=0
@@ -300,21 +392,21 @@ download_ui_cache() {
     extracted_root=$entry
     extracted_count=$((extracted_count + 1))
   done
-  [ "$extracted_count" -eq 1 ] || die "Unexpected GitHub archive layout."
+  [ "$extracted_count" -eq 1 ] || die "GitHub 归档结构不符合预期。"
 
   resolved_source_path=$source_path
   if [ -z "$resolved_source_path" ]; then
     resolved_source_path=$(discover_ui_source "$extracted_root" "$skill_name") \
-      || die "Could not find $skill_name in downloaded repo. Pass --ui-path explicitly."
+      || die "下载的仓库中未找到 $skill_name，请显式传入 --ui-path。"
   fi
 
   src=$extracted_root/$resolved_source_path
-  [ -d "$src" ] || die "ui-ux-pro-max source not found: $resolved_source_path"
-  [ -f "$src/SKILL.md" ] || die "ui-ux-pro-max source missing SKILL.md: $resolved_source_path"
+  [ -d "$src" ] || die "未找到 ui-ux-pro-max 源目录：$resolved_source_path"
+  [ -f "$src/SKILL.md" ] || die "ui-ux-pro-max 源目录缺少 SKILL.md：$resolved_source_path"
 
   rm -rf -- "$cache_dir"
   cp -RL -- "$src" "$cache_dir"
-  printf 'cache  %-22s downloaded from %s@%s (%s)\n' "$skill_name" "$repo" "$ref" "$resolved_source_path"
+  printf '缓存  %-22s 已从 %s@%s 下载（%s）\n' "$skill_name" "$repo" "$ref" "$resolved_source_path"
 
   trap - EXIT HUP INT TERM
   cleanup_download
@@ -327,34 +419,35 @@ UI_PATH=
 UI_NAME=ui-ux-pro-max
 FORCE=1
 
-[ "$#" -eq 0 ] || die "This script is interactive and does not accept command-line arguments."
+[ "$#" -eq 0 ] || die "此脚本为交互式脚本，不接受命令行参数。"
 
 REPO_ROOT=$(abspath "$(expand_path "$REPO_ROOT")")
-[ -d "$REPO_ROOT" ] || die "Repo root not found: $REPO_ROOT"
+[ -d "$REPO_ROOT" ] || die "未找到仓库根目录：$REPO_ROOT"
 
-printf 'Checking ui-ux-pro-max cache...\n'
-cache_root=$REPO_ROOT/skills
-download_ui_cache "$cache_root" "$UI_REPO" "$UI_REF" "$UI_PATH" "$UI_NAME" 0
-
-printf '\nInstallation setup\n'
-printf 'Repo root: %s\n' "$REPO_ROOT"
-printf 'Skills root: %s\n' "$REPO_ROOT/skills"
+printf '\n安装设置\n'
+printf '仓库根目录：%s\n' "$REPO_ROOT"
+printf '技能源目录：%s\n' "$REPO_ROOT/skills"
 AGENT=$(prompt_agent)
 DEST=$(prompt_dest "$AGENT")
 MODE=$(prompt_mode)
+FORCE=$(prompt_overwrite)
 
 mkdir -p -- "$DEST"
 DEST=$(abspath "$DEST")
 
-printf '\nSummary\n'
-printf 'Target agent: %s\n' "$AGENT"
-printf 'Target skills dir: %s\n' "$DEST"
-printf 'Install mode: %s\n' "$MODE"
-printf 'Repo skills source: %s\n' "$REPO_ROOT/skills"
-printf 'Overwrite existing target entries: yes\n'
+printf '\n安装摘要\n'
+printf '目标智能体：%s\n' "$(display_agent "$AGENT")"
+printf '目标技能目录：%s\n' "$DEST"
+printf '安装模式：%s\n' "$(display_mode "$MODE")"
+printf '仓库技能来源：%s\n' "$REPO_ROOT/skills"
+printf '已有目标条目处理：%s\n' "$(display_overwrite "$FORCE")"
 confirm_install
 
-printf '\nInstalling skills...\n'
+printf '\n正在准备 ui-ux-pro-max 缓存...\n'
+cache_root=$REPO_ROOT/skills
+download_ui_cache "$cache_root" "$UI_REPO" "$UI_REF" "$UI_PATH" "$UI_NAME" 0
+
+printf '\n正在安装技能...\n'
 local_found=0
 while IFS= read -r skill_dir; do
   [ -n "$skill_dir" ] || continue
@@ -363,4 +456,4 @@ while IFS= read -r skill_dir; do
 done <<EOF
 $(discover_local_skills "$REPO_ROOT")
 EOF
-[ "$local_found" = "1" ] || die "No skills found under $REPO_ROOT/skills"
+[ "$local_found" = "1" ] || die "在 $REPO_ROOT/skills 下未找到技能"

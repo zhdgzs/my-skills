@@ -76,12 +76,13 @@ sh scripts/bootstrap_skills.sh
 - 目标 agent：`codex`、`claude`、`claude-code`、`custom`
 - 目标 skills 目录
 - 安装模式：`symlink` 或 `copy`
-- `agent` 和安装模式都支持数字快捷输入
+- 已有目标条目处理：覆盖或跳过
+- 这些交互项都支持数字快捷输入
 
 安装时会始终执行以下操作：
 
 - 安装 `skills/` 目录下的全部已提交 skills，包括 `grill-me`
-- 如果目标位置已有同名目录，直接覆盖
+- 如果目标位置已有同名条目，根据选择覆盖或跳过
 
 ## Bootstrap 脚本
 
@@ -97,8 +98,8 @@ sh scripts/bootstrap_skills.sh
 - 安装到指定的 skills 目标目录
 - 自动探测上游仓库里 `ui-ux-pro-max` 的实际 skill 路径
 - 将下载结果缓存到 `skills/ui-ux-pro-max/`
-- 交互式询问安装目标和安装模式
-- 覆盖目标目录中已存在的同名 skill
+- 交互式询问安装目标、安装模式和已有条目处理方式
+- 根据选择覆盖或跳过目标目录中已存在的同名 skill
 
 说明：
 

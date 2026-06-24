@@ -1,0 +1,3 @@
+display_name: GitHub
+short_description: Use the gh CLI for GitHub repos, PRs, issues, runs, and API queries.
+default_prompt: Interact with GitHub using the gh CLI and prefer structured output with --json or --jq when useful.
