@@ -1,0 +1,4 @@
+interface:
+  display_name: "SiYuan Release to OpenList"
+  short_description: "同步 SiYuan Release 到 OpenList 并清理 Actions 制品"
+  default_prompt: "使用 $siyuan-release-to-openlist 将指定 SiYuan Release 同步到本机 OpenList，验收后替换旧版本并删除对应 Actions 制品。"

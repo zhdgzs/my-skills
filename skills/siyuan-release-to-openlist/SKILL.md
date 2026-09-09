@@ -1,9 +1,9 @@
 ---
-name: release-to-openlist
+name: siyuan-release-to-openlist
 description: 将已发布的 SiYuan GitHub Release 安全同步到本机 OpenList，按需替换旧版本，并在完整验收后删除对应成功 GitHub Actions run 的制品。适用于 Release 已存在、需要在独立 Linux/OpenList 主机完成接收与清理的场景；不用于同步源码、构建安装包、发布 Docker 镜像或创建 Release。
 ---
 
-# Release To OpenList
+# SiYuan Release To OpenList
 
 将一个已经发布的稳定版 SiYuan Release 接收到本机 OpenList。这个 Skill 独立于任何项目仓库运行，不要求当前目录是 Git 仓库。
 

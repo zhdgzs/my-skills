@@ -127,7 +127,7 @@ def post_json(base_url, endpoint, payload):
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "Release-To-OpenList-Skill/1.0",
+            "User-Agent": "SiYuan-Release-To-OpenList-Skill/1.0",
         },
         method="POST",
     )
@@ -192,7 +192,7 @@ def verify_public(public_url, mount_path, tag, expected, password):
         urllib.parse.urljoin(f"{public_url.rstrip('/')}/", raw_url),
         headers={
             "Range": "bytes=0-0",
-            "User-Agent": "Release-To-OpenList-Skill/1.0",
+            "User-Agent": "SiYuan-Release-To-OpenList-Skill/1.0",
         },
     )
     try:
@@ -205,7 +205,7 @@ def verify_public(public_url, mount_path, tag, expected, password):
     if range_status != 206 or range_length != 1:
         raise ValueError("OpenList Range verification failed")
 
-    write_test_path = f"{version_path}/.release-to-openlist-write-test-{uuid.uuid4().hex}"
+    write_test_path = f"{version_path}/.siyuan-release-to-openlist-write-test-{uuid.uuid4().hex}"
     mkdir_status, mkdir_result = post_json(
         public_url,
         "/api/fs/mkdir",
